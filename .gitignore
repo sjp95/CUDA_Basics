@@ -1,0 +1,65 @@
+# Build artifacts
+bin/
+build/
+build_test/
+_skbuild/
+_deps/
+out/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# Binaries and objects
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# OS specific
+.DS_Store
+
+# Logs and temp
+*.log
+*.sge
+
+# Project specific
+*.h5
+patch_sycl.py
+refactor_float.py
+
+# Documentation
+site/
+
+# Packaging & Distribution
+dist/
+wheelhouse/
+whl_out/
+*.whl
+*.tar.gz
+
+# IDE & Editor files
+.vscode/
+.idea/
+.ipynb_checkpoints/
+
+# private work
+private/
+bindings/julia/manual/
+external/
+
+*.pdf
+*.txt
+!CMakeLists.txt
+

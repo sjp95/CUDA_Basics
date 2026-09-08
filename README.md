@@ -1,4 +1,4 @@
- # CUDA Basics with C++, cuBLAS, and Thrust
+# CUDA Basics with C++, cuBLAS, and Thrust
 
 This README introduces the basics of CUDA programming in C++, including GPU kernels, memory management, vector addition, matrix operations, cuBLAS, and Thrust.
 
@@ -194,4 +194,3 @@ Useful Thrust algorithms include `sort`, `reduce`, `transform`, `copy`, `fill`, 
 - CUDA Toolkit
 - C++ compiler
 - Optional: cuBLAS and Thrust (included with the CUDA Toolkit)
-# CUDA_Basics
