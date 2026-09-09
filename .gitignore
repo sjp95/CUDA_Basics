@@ -61,5 +61,15 @@ external/
 
 *.pdf
 *.txt
+!*.cu
+!*.cuh
+!*.cpp
+!*.c
+!*.h
+!*.hpp
+!Makefile
 !CMakeLists.txt
+!README*
+!LICENSE*
+!.gitignore
 
