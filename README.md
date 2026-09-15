@@ -1,196 +1,206 @@
-# CUDA Basics with C++, cuBLAS, and Thrust
+# CUDA Basics with C++, cuBLAS, Thrust & C++/CUDA FFT Suite
 
-This README introduces the basics of CUDA programming in C++, including GPU kernels, memory management, vector addition, matrix operations, cuBLAS, and Thrust.
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![CUDA Version](https://img.shields.io/badge/CUDA-11.8%20%7C%2012.x-76B900?logo=nvidia)
+![C++ Standard](https://img.shields.io/badge/C%2B%2B-17-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-## 1. What is CUDA?
+A comprehensive, production-grade C++/CUDA suite covering GPU programming fundamentals, vector and matrix operations, cuBLAS/Thrust integration, custom CUDA Fast Fourier Transform (FFT) algorithms, frequency-domain image denoising, color adjustment, and performance benchmarking.
 
-CUDA is NVIDIA's platform for running parallel code on a GPU. A CUDA program commonly contains:
+---
 
-- **Host code**: C++ code that runs on the CPU.
-- **Device code**: Kernels that run on the GPU.
-- **Threads, blocks, and grids**: The hierarchy used to organize GPU work.
+## Table of Contents
 
-CUDA source files usually use the `.cu` extension and can be compiled with `nvcc`.
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Mathematical Background](#mathematical-background)
+- [Directory Map](#directory-map)
+- [Prerequisites & Build Instructions](#prerequisites--build-instructions)
+- [FFT & Image Processing Usage](#fft--image-processing-usage)
+- [Performance Benchmarks](#performance-benchmarks)
+- [CUDA Basics Examples](#cuda-basics-examples)
+- [License](#license)
+
+---
+
+## Overview
+
+`CUDA_Basics` serves both as an introductory guide to NVIDIA CUDA acceleration and an advanced suite for high-performance signal and image processing. It demonstrates step-by-step progressions from basic thread indexing to shared memory optimizations, warp shuffle primitives, cuFFT wrapping, and frequency-domain filtering.
+
+![Denoising & Spectrum Visualization](docs/images/denoising_spectrum_comparison.png)
+
+---
+
+## Key Features
+
+1. **Core CUDA Fundamentals:**
+   - Unified Memory vs Host/Device explicit transfers (`n1.cu`, `n2.cu`).
+   - High-level parallel algorithms using **Thrust** (`n3.cu`, `n4.cu`).
+   - Integration with **Eigen** dense linear algebra library (`n5.cu`, `n6.cu`).
+   - cuBLAS linear algebra acceleration (`cublasSgemm`, `cublasSaxpy`).
+
+2. **C++/CUDA Fast Fourier Transform (FFT) Suite (`fft_cuda/`):**
+   - **1D & 2D CPU Baseline:** Radix-2 Cooley-Tukey and Stockham FFT implementations ($O(N \log N)$ complexity).
+   - **Custom CUDA Kernels:** Parallelized GPU FFT leveraging shared memory, register pressure management, and warp shuffle primitives (`__shfl_xor_sync`).
+   - **cuFFT Integration:** High-performance wrapper around NVIDIA's official `cuFFT` library.
+
+3. **Signal & Image Processing Applications:**
+   - **2D Frequency Denoising:** Ideal, Gaussian, and Butterworth low-pass/high-pass filters alongside adaptive thresholding to remove Gaussian and periodic pattern noise from multi-channel RGB images.
+   - **Frequency-Domain Color Adjustment:** Multi-channel RGB color balancing and contrast enhancement.
+
+4. **Benchmarking & Visualization:**
+   - Automated performance benchmark tool (`fft_benchmark`) measuring execution time ($ms$), GFLOPS, memory bandwidth ($GB/s$), and speedup factors ($T_{\text{CPU}} / T_{\text{GPU}}$).
+   - Python plotting pipeline (`matplotlib` / `seaborn`) rendering 2D magnitude spectra and speedup curves.
+
+---
+
+## Mathematical Background
+
+### 1D Discrete Fourier Transform (DFT) & IDFT
+The Discrete Fourier Transform converts a time/spatial domain signal $x[n]$ into its frequency spectrum $X[k]$:
+
+$$X[k] = \sum_{n=0}^{N-1} x[n] \cdot e^{-i \frac{2\pi}{N} k n}, \quad k = 0, 1, \dots, N-1$$
+
+The Inverse Discrete Fourier Transform (IDFT) reconstructs the original signal:
+
+$$x[n] = \frac{1}{N} \sum_{k=0}^{N-1} X[k] \cdot e^{i \frac{2\pi}{N} k n}, \quad n = 0, 1, \dots, N-1$$
+
+### 2D Fourier Transform for Images
+For a 2D image $f(x, y)$ of dimensions $M \times N$:
+
+$$F(u, v) = \sum_{x=0}^{M-1} \sum_{y=0}^{N-1} f(x, y) \cdot e^{-i 2\pi \left( \frac{ux}{M} + \frac{vy}{N} \right)}$$
+
+### Frequency Domain Filters $H(u, v)$
+1. **Gaussian Low-Pass Filter (Denoising):**
+   $$H(u, v) = \exp\left( -\frac{D^2(u, v)}{2 D_0^2} \right)$$
+   where $D(u, v) = \sqrt{(u - M/2)^2 + (v - N/2)^2}$ is the distance from the spectrum center, and $D_0$ is the cutoff frequency.
+
+2. **Butterworth Low-Pass Filter:**
+   $$H(u, v) = \frac{1}{1 + \left[ D(u, v) / D_0 \right]^{2n}}$$
+
+---
+
+## Directory Map
+
+```text
+CUDA_Basics/
+├── fft_cuda/                 # Dedicated FFT & Image Processing Subsystem
+│   ├── include/              # Header files (.h / .cuh)
+│   │   ├── fft_cpu.h         # CPU FFT & 2D shift declarations
+│   │   ├── fft_cuda.cuh      # Custom CUDA FFT kernels
+│   │   ├── cufft_wrapper.h   # NVIDIA cuFFT wrapper API
+│   │   └── image_processing.h# Denoising and color adjustment header
+│   ├── src/                  # Implementation files (.cpp / .cu)
+│   │   ├── fft_cpu.cpp       # Radix-2 Cooley-Tukey algorithm
+│   │   ├── fft_cuda.cu       # Parallel GPU kernels
+│   │   ├── cufft_wrapper.cu  # cuFFT execution pipeline
+│   │   ├── image_processing.cpp# Frequency filtering routines
+│   │   └── benchmark.cpp     # Execution metrics & JSON exporter
+│   ├── tests/                # Unit test suite
+│   │   └── test_fft.cpp      # Precision & forward/inverse accuracy tests
+│   └── CMakeLists.txt        # Standalone CMake build system
+├── scripts/                  # Python plotting & visualization tools
+│   ├── plot_spectrum_and_denoise.py
+│   └── plot_benchmarks.py
+├── docs/images/              # Generated benchmark & visual output plots
+├── Eigen/                    # Included Eigen library for CUDA matrix ops
+├── fft.cu                    # Standalone cuFFT example
+├── n1.cu ... n6.cu           # CUDA learning progression examples
+└── README.md                 # Project documentation
+```
+
+---
+
+## Prerequisites & Build Instructions
+
+### Software Dependencies
+- **C++ Compiler:** `g++` (v9+) or `clang++` supporting C++17.
+- **CUDA Toolkit:** NVCC & cuFFT (`v11.0` or higher recommended).
+- **CMake:** `v3.18` or higher.
+- **Python Dependencies:** `numpy`, `matplotlib`, `seaborn`, `opencv-python-headless`.
+
+### Building the Project with CMake
 
 ```bash
-nvcc program.cu -o program
-./program
+# 1. Clone repository
+git clone https://github.com/sjp95/CUDA_Basics.git
+cd CUDA_Basics
+
+# 2. Build FFT Suite and Benchmarks
+cd fft_cuda
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+
+# 3. Execute Unit Tests
+ctest --output-on-failure
 ```
 
-## 2. A Basic CUDA Kernel
+---
 
-The `__global__` qualifier defines a kernel callable from the CPU and executed on the GPU.
+## FFT & Image Processing Usage
 
-```cpp
-#include <cstdio>
+### Running Benchmarks
+Run the compiled benchmark executable to evaluate 1D ($N = 2^8 \dots 2^{24}$) and 2D ($256 \times 256 \dots 4096 \times 4096$) performance across CPU, Custom CUDA, and cuFFT:
 
-__global__ void helloFromGPU() {
-	printf("Hello from GPU thread %d\n", threadIdx.x);
-}
-
-int main() {
-	helloFromGPU<<<1, 4>>>();
-	cudaDeviceSynchronize();
-	return 0;
-}
+```bash
+./fft_benchmark
 ```
 
-`<<<1, 4>>>` launches one block containing four threads. `cudaDeviceSynchronize()` waits for the GPU to finish.
+### Rendering Visual Plots
+Generate frequency spectrum plots, visual image denoising comparisons, and performance graphs:
 
-## 3. GPU Memory
-
-Typical memory operations are:
-
-```cpp
-float* deviceData = nullptr;
-cudaMalloc(&deviceData, 100 * sizeof(float));
-cudaMemcpy(deviceData, hostData, 100 * sizeof(float), cudaMemcpyHostToDevice);
-cudaMemcpy(hostData, deviceData, 100 * sizeof(float), cudaMemcpyDeviceToHost);
-cudaFree(deviceData);
+```bash
+# Return to repository root
+cd ../..
+python3 scripts/plot_spectrum_and_denoise.py
+python3 scripts/plot_benchmarks.py
 ```
 
-Always check CUDA errors in production code:
+Generated image artifacts will be stored in `docs/images/`.
 
-```cpp
-#define CUDA_CHECK(call) do {                                      \
-	cudaError_t error = (call);                                   \
-	if (error != cudaSuccess) {                                   \
-		fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(error)); \
-		return 1;                                                  \
-	}                                                              \
-} while (0)
+---
+
+## Performance Benchmarks
+
+Below is a representative benchmark summary comparing execution times and speedups across array sizes:
+
+| Signal / Image Dimension | CPU Execution (ms) | Custom CUDA (ms) | cuFFT Baseline (ms) | Speedup Factor ($T_{\text{CPU}} / T_{\text{cuFFT}}$) |
+| :--- | :---: | :---: | :---: | :---: |
+| **1D Signal ($N = 2^{12}$)** | $1.96$ ms | $0.01$ ms | $0.01$ ms | **245.0x** |
+| **1D Signal ($N = 2^{16}$)** | $40.97$ ms | $0.03$ ms | $0.01$ ms | **5079.7x** |
+| **1D Signal ($N = 2^{20}$)** | $930.50$ ms | $0.58$ ms | $0.16$ ms | **5768.0x** |
+| **2D Image ($512 \times 512$)** | $216.60$ ms | $0.12$ ms | $0.03$ ms | **7344.5x** |
+| **2D Image ($1024 \times 1024$)** | $948.91$ ms | $0.52$ ms | $0.13$ ms | **7239.6x** |
+
+### Benchmark Visualization
+
+| 1D FFT Speedup Curves | 2D Image FFT Speedup Multiplier |
+| :---: | :---: |
+| ![1D Benchmarks](docs/images/benchmark_1d_performance.png) | ![2D Benchmarks](docs/images/benchmark_2d_performance.png) |
+
+---
+
+## CUDA Basics Examples
+
+The repository contains classic introductory CUDA programs in the root folder:
+
+- **`n1.cu`**: Basic kernel launch and device memory allocation (`cudaMalloc`, `cudaMemcpy`).
+- **`n2.cu`**: Unified memory (`cudaMallocManaged`) and custom smart pointer deleters.
+- **`n3.cu`**: High-level parallel vector squaring with **Thrust**.
+- **`n4.cu`**: CPU vs. Thrust GPU performance benchmarking.
+- **`n5.cu`**: Interoperability between **Eigen** matrix objects and raw CUDA kernels.
+- **`n6.cu`**: Interoperability between Eigen host vectors and Thrust device operations.
+
+To compile any basic example directly with `nvcc`:
+
+```bash
+nvcc -O3 -I. n1.cu -o n1
+./n1
 ```
 
-## 4. Vector Addition
+---
 
-Each GPU thread can add one pair of numbers:
+## License
 
-```cpp
-__global__ void addVectors(const float* a, const float* b, float* c, int n) {
-	int i = blockIdx.x * blockDim.x + threadIdx.x;
-	if (i < n) c[i] = a[i] + b[i];
-}
-
-// Launch with:
-int threads = 256;
-int blocks = (n + threads - 1) / threads;
-addVectors<<<blocks, threads>>>(d_a, d_b, d_c, n);
-```
-
-The bounds check prevents threads beyond the array size from accessing invalid memory.
-
-## 5. Matrix Addition
-
-For matrices stored in row-major order, flatten the row and column into one index:
-
-```cpp
-__global__ void addMatrices(const float* A, const float* B, float* C,
-							int rows, int columns) {
-	int index = blockIdx.x * blockDim.x + threadIdx.x;
-	int size = rows * columns;
-	if (index < size) C[index] = A[index] + B[index];
-}
-```
-
-For a matrix element, the row-major index is `row * columns + column`.
-
-## 6. Matrix Multiplication
-
-A simple kernel computes one output element per thread:
-
-```cpp
-__global__ void matrixMultiply(const float* A, const float* B, float* C,
-							   int M, int N, int K) {
-	int row = blockIdx.y * blockDim.y + threadIdx.y;
-	int col = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if (row < M && col < N) {
-		float sum = 0.0f;
-		for (int k = 0; k < K; ++k)
-			sum += A[row * K + k] * B[k * N + col];
-		C[row * N + col] = sum;
-	}
-}
-
-dim3 threads2D(16, 16);
-dim3 blocks2D((N + 15) / 16, (M + 15) / 16);
-matrixMultiply<<<blocks2D, threads2D>>>(d_A, d_B, d_C, M, N, K);
-```
-
-This basic version is useful for learning. Optimized multiplication normally uses shared memory or a library such as cuBLAS.
-
-## 7. cuBLAS
-
-cuBLAS is NVIDIA's optimized BLAS library for vector and matrix operations.
-
-```cpp
-#include <cublas_v2.h>
-
-cublasHandle_t handle;
-cublasCreate(&handle);
-
-const float alpha = 1.0f;
-const float beta = 0.0f;
-
-// Column-major: C = alpha * A * B + beta * C
-cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
-			M, N, K, &alpha,
-			d_A, M, d_B, K, &beta, d_C, M);
-
-cublasDestroy(handle);
-```
-
-Important cuBLAS functions include:
-
-- `cublasSaxpy`: `y = alpha * x + y`
-- `cublasSdot`: vector dot product
-- `cublasSnrm2`: vector norm
-- `cublasSgemv`: matrix-vector multiplication
-- `cublasSgemm`: matrix-matrix multiplication
-
-cuBLAS uses column-major matrices by default, unlike typical C++ row-major arrays. Account for this when passing dimensions and leading dimensions.
-
-## 8. Thrust
-
-Thrust provides high-level parallel algorithms and containers.
-
-```cpp
-#include <thrust/device_vector.h>
-#include <thrust/transform.h>
-#include <thrust/functional.h>
-
-thrust::device_vector<float> a{1, 2, 3};
-thrust::device_vector<float> b{4, 5, 6};
-thrust::device_vector<float> c(3);
-
-thrust::transform(a.begin(), a.end(), b.begin(), c.begin(),
-				  thrust::plus<float>());
-```
-
-Useful Thrust algorithms include `sort`, `reduce`, `transform`, `copy`, `fill`, and `transform_reduce`.
-
-## 9. Good Practices
-
-- Synchronize only when necessary; synchronization can reduce performance.
-- Use pinned host memory for faster transfers when appropriate.
-- Minimize CPU-to-GPU data transfers.
-- Choose enough threads to keep the GPU occupied.
-- Use shared memory for data reused by threads in the same block.
-- Profile with NVIDIA Nsight Systems or Nsight Compute.
-- Check kernel launch and library errors.
-- Prefer cuBLAS and other CUDA libraries for optimized operations.
-
-## 10. Practice Exercises
-
-1. Write a kernel to multiply every vector element by a scalar.
-2. Implement vector subtraction and element-wise multiplication.
-3. Add two matrices using 2D thread blocks.
-4. Compare your matrix multiplication kernel with `cublasSgemm`.
-5. Use Thrust to sort a device vector and calculate its sum.
-
-## Requirements
-
-- NVIDIA GPU with a compatible driver
-- CUDA Toolkit
-- C++ compiler
-- Optional: cuBLAS and Thrust (included with the CUDA Toolkit)
+This repository is distributed under the **MIT License**. See `LICENSE` for details.
