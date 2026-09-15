@@ -1,7 +1,6 @@
 #include "fft_cpu.h"
 #include <algorithm>
 #include <stdexcept>
-#include <numbers>
 
 namespace cuda_fft {
 
