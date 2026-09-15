@@ -1,6 +1,5 @@
-#ifndef FFT_CPU_H
-#ifndef FFT_TYPES_H
-#define FFT_TYPES_H
+#ifndef CUDA_FFT_CPU_H
+#define CUDA_FFT_CPU_H
 
 #include <complex>
 #include <vector>
@@ -22,5 +21,4 @@ void fftshift_2d(std::vector<Complex>& data, int width, int height);
 
 } // namespace cuda_fft
 
-#endif // FFT_TYPES_H
-#endif // FFT_CPU_H
+#endif // CUDA_FFT_CPU_H
