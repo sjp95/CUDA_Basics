@@ -3,7 +3,7 @@
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![CUDA Version](https://img.shields.io/badge/CUDA-11.8%20%7C%2012.x-76B900?logo=nvidia)
 ![C++ Standard](https://img.shields.io/badge/C%2B%2B-17-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+<!-- ![License](https://img.shields.io/badge/License-MIT-green) -->
 
 A comprehensive, production-grade C++/CUDA suite covering GPU programming fundamentals, vector and matrix operations, cuBLAS/Thrust integration, custom CUDA Fast Fourier Transform (FFT) algorithms, frequency-domain image denoising, color adjustment, and performance benchmarking.
 
@@ -19,7 +19,7 @@ A comprehensive, production-grade C++/CUDA suite covering GPU programming fundam
 - [FFT & Image Processing Usage](#fft--image-processing-usage)
 - [Performance Benchmarks](#performance-benchmarks)
 - [CUDA Basics Examples](#cuda-basics-examples)
-- [License](#license)
+<!-- - [License](#license) -->
 
 ---
 
@@ -201,6 +201,6 @@ nvcc -O3 -I. n1.cu -o n1
 
 ---
 
-## License
+<!-- ## License
 
-This repository is distributed under the **MIT License**. See `LICENSE` for details.
+This repository is distributed under the **MIT License**. See `LICENSE` for details. -->

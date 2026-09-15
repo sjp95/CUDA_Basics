@@ -48,6 +48,7 @@ wheelhouse/
 whl_out/
 *.whl
 *.tar.gz
+build/
 
 # IDE & Editor files
 .vscode/
@@ -60,6 +61,9 @@ bindings/julia/manual/
 external/
 
 *.pdf
+*.png
+*.jpg
+*.jpeg
 *.txt
 !*.cu
 !*.cuh
