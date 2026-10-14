@@ -1,4 +1,6 @@
 #include "fft_cpu.h"
+#include "fft_cpu_cache_optimized.h"
+#include "fftw_wrapper.h"
 #include "fft_cuda.cuh"
 #include "cufft_wrapper.h"
 #include "image_processing.h"
@@ -29,23 +31,54 @@ void test_1d_fft_cpu() {
     assert(max_err < 1e-4);
 }
 
-void test_1d_fft_cuda() {
-    std::cout << "[TEST] Running 1D Custom CUDA FFT test..." << std::endl;
-    std::vector<Complex> input = {
-        {1.0, 0.0}, {2.0, 0.0}, {3.0, 0.0}, {4.0, 0.0},
-        {5.0, 0.0}, {6.0, 0.0}, {7.0, 0.0}, {8.0, 0.0}
-    };
-    std::vector<Complex> freq_cpu, freq_cuda;
+void test_1d_fft_cache_optimized() {
+    std::cout << "[TEST] Running 1D Cache-Optimized CPU FFT test..." << std::endl;
+    size_t n = 16;
+    Complex* data = allocate_aligned_complex(n);
+    Complex* orig = allocate_aligned_complex(n);
 
-    fft_1d_cpu(input, freq_cpu, false);
-    fft_1d_cuda(input, freq_cuda, false);
+    for (size_t i = 0; i < n; ++i) {
+        data[i] = Complex(i + 1, (i * 2) % 5);
+        orig[i] = data[i];
+    }
+
+    fft_1d_cache_optimized(data, n, false); // Forward
+    fft_1d_cache_optimized(data, n, true);  // Inverse
 
     double max_err = 0.0;
-    for (size_t i = 0; i < input.size(); ++i) {
-        max_err = std::max(max_err, std::abs(freq_cpu[i] - freq_cuda[i]));
+    for (size_t i = 0; i < n; ++i) {
+        max_err = std::max(max_err, std::abs(orig[i] - data[i]));
     }
-    std::cout << "  1D CUDA vs CPU FFT Max Error: " << max_err << std::endl;
+    std::cout << "  1D Cache-Optimized FFT Roundtrip Max Error: " << max_err << std::endl;
     assert(max_err < 1e-4);
+
+    free_aligned_complex(data);
+    free_aligned_complex(orig);
+}
+
+void test_1d_fftw_wrapper() {
+    std::cout << "[TEST] Running 1D FFTW Wrapper test..." << std::endl;
+    size_t n = 16;
+    Complex* data = allocate_aligned_complex(n);
+    Complex* orig = allocate_aligned_complex(n);
+
+    for (size_t i = 0; i < n; ++i) {
+        data[i] = Complex(i * 1.5, i * 0.5);
+        orig[i] = data[i];
+    }
+
+    fftw_1d_wrapper(data, n, false); // Forward
+    fftw_1d_wrapper(data, n, true);  // Inverse
+
+    double max_err = 0.0;
+    for (size_t i = 0; i < n; ++i) {
+        max_err = std::max(max_err, std::abs(orig[i] - data[i]));
+    }
+    std::cout << "  1D FFTW Wrapper Roundtrip Max Error: " << max_err << std::endl;
+    assert(max_err < 1e-4);
+
+    free_aligned_complex(data);
+    free_aligned_complex(orig);
 }
 
 void test_2d_fft() {
@@ -84,7 +117,8 @@ int main() {
     std::cout << "========================================" << std::endl;
 
     test_1d_fft_cpu();
-    test_1d_fft_cuda();
+    test_1d_fft_cache_optimized();
+    test_1d_fftw_wrapper();
     test_2d_fft();
     test_image_filtering();
 

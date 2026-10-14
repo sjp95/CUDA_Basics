@@ -5,7 +5,7 @@
 ![C++ Standard](https://img.shields.io/badge/C%2B%2B-17-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-A comprehensive, production-grade C++/CUDA suite covering GPU programming fundamentals, vector and matrix operations, cuBLAS/Thrust integration, custom CUDA Fast Fourier Transform (FFT) algorithms, frequency-domain image denoising, color adjustment, and performance benchmarking.
+A comprehensive, production-grade C++/CUDA suite covering GPU programming fundamentals, vector and matrix operations, cuBLAS/Thrust integration, custom CUDA Fast Fourier Transform (FFT) algorithms, cache-optimized CPU FFT engines, frequency-domain image denoising, color adjustment, and performance benchmarking.
 
 ---
 
@@ -25,7 +25,7 @@ A comprehensive, production-grade C++/CUDA suite covering GPU programming fundam
 
 ## Overview
 
-`CUDA_Basics` serves both as an introductory guide to NVIDIA CUDA acceleration and an advanced suite for high-performance signal and image processing. It demonstrates step-by-step progressions from basic thread indexing to shared memory optimizations, warp shuffle primitives, cuFFT wrapping, and frequency-domain filtering.
+`CUDA_Basics` serves both as an introductory guide to NVIDIA CUDA acceleration and an advanced suite for high-performance signal and image processing. It demonstrates step-by-step progressions from basic thread indexing to shared memory optimizations, warp shuffle primitives, cuFFT wrapping, cache-tiled CPU FFT implementations, and frequency-domain filtering.
 
 ![Denoising & Spectrum Visualization](docs/images/denoising_spectrum_comparison.png)
 
@@ -40,17 +40,17 @@ A comprehensive, production-grade C++/CUDA suite covering GPU programming fundam
    - cuBLAS linear algebra acceleration (`cublasSgemm`, `cublasSaxpy`).
 
 2. **C++/CUDA Fast Fourier Transform (FFT) Suite (`fft_cuda/`):**
-   - **1D & 2D CPU Baseline:** Radix-2 Cooley-Tukey and Stockham FFT implementations ($O(N \log N)$ complexity).
+   - **1D & 2D CPU Baseline & Cache-Optimized:** Radix-2 Cooley-Tukey and Stockham FFT implementations ($O(N \log N)$ complexity) with 64-byte alignment and cache loop blocking.
    - **Custom CUDA Kernels:** Parallelized GPU FFT leveraging shared memory, register pressure management, and warp shuffle primitives (`__shfl_xor_sync`).
-   - **cuFFT Integration:** High-performance wrapper around NVIDIA's official `cuFFT` library.
+   - **cuFFT & FFTW3 Integrations:** Wrappers around NVIDIA's official `cuFFT` library and vendor baseline `FFTW3`.
 
 3. **Signal & Image Processing Applications:**
    - **2D Frequency Denoising:** Ideal, Gaussian, and Butterworth low-pass/high-pass filters alongside adaptive thresholding to remove Gaussian and periodic pattern noise from multi-channel RGB images.
    - **Frequency-Domain Color Adjustment:** Multi-channel RGB color balancing and contrast enhancement.
 
 4. **Benchmarking & Visualization:**
-   - Automated performance benchmark tool (`fft_benchmark`) measuring execution time ($ms$), GFLOPS, memory bandwidth ($GB/s$), and speedup factors ($T_{\text{CPU}} / T_{\text{GPU}}$).
-   - Python plotting pipeline (`matplotlib` / `seaborn`) rendering 2D magnitude spectra and speedup curves.
+   - Automated performance benchmark tools (`fft_benchmark`, `fft_benchmark_cache`) measuring execution time ($ms$), GFLOPS, memory bandwidth ($GB/s$), and speedup factors ($T_{\text{CPU}} / T_{\text{GPU}}$).
+   - Python plotting pipeline (`matplotlib` / `seaborn`) rendering 2D magnitude spectra and speedup curves with NumPy 2.x support.
 
 ---
 
@@ -70,14 +70,6 @@ For a 2D image $f(x, y)$ of dimensions $M \times N$:
 
 $$F(u, v) = \sum_{x=0}^{M-1} \sum_{y=0}^{N-1} f(x, y) \cdot e^{-i 2\pi \left( \frac{ux}{M} + \frac{vy}{N} \right)}$$
 
-### Frequency Domain Filters $H(u, v)$
-1. **Gaussian Low-Pass Filter (Denoising):**
-   $$H(u, v) = \exp\left( -\frac{D^2(u, v)}{2 D_0^2} \right)$$
-   where $D(u, v) = \sqrt{(u - M/2)^2 + (v - N/2)^2}$ is the distance from the spectrum center, and $D_0$ is the cutoff frequency.
-
-2. **Butterworth Low-Pass Filter:**
-   $$H(u, v) = \frac{1}{1 + \left[ D(u, v) / D_0 \right]^{2n}}$$
-
 ---
 
 ## Directory Map
@@ -87,18 +79,24 @@ CUDA_Basics/
 ├── fft_cuda/                 # Dedicated FFT & Image Processing Subsystem
 │   ├── include/              # Header files (.h / .cuh)
 │   │   ├── fft_cpu.h         # CPU FFT & 2D shift declarations
+│   │   ├── fft_cpu_cache_optimized.h # Cache-tiled 64-byte aligned FFT header
+│   │   ├── fftw_wrapper.h    # FFTW3 C++ wrapper header
 │   │   ├── fft_cuda.cuh      # Custom CUDA FFT kernels
 │   │   ├── cufft_wrapper.h   # NVIDIA cuFFT wrapper API
 │   │   └── image_processing.h# Denoising and color adjustment header
 │   ├── src/                  # Implementation files (.cpp / .cu)
 │   │   ├── fft_cpu.cpp       # Radix-2 Cooley-Tukey algorithm
+│   │   ├── fft_cpu_cache_optimized.cpp # Tiled loop-blocked FFT
+│   │   ├── fftw_wrapper.cpp  # FFTW3 execution wrapper
 │   │   ├── fft_cuda.cu       # Parallel GPU kernels
 │   │   ├── cufft_wrapper.cu  # cuFFT execution pipeline
 │   │   ├── image_processing.cpp# Frequency filtering routines
-│   │   └── benchmark.cpp     # Execution metrics & JSON exporter
+│   │   ├── benchmark.cpp     # Execution metrics & JSON exporter
+│   │   └── benchmark_cpu_cache.cpp # CPU Cache benchmark suite
 │   ├── tests/                # Unit test suite
 │   │   └── test_fft.cpp      # Precision & forward/inverse accuracy tests
-│   └── CMakeLists.txt        # Standalone CMake build system
+│   ├── CMakeLists.txt        # Standalone CMake build system
+│   └── README.md             # QKrylov-structured FFT Engine documentation
 ├── scripts/                  # Python plotting & visualization tools
 │   ├── plot_spectrum_and_denoise.py
 │   └── plot_benchmarks.py
@@ -134,69 +132,6 @@ make -j$(nproc)
 
 # 3. Execute Unit Tests
 ctest --output-on-failure
-```
-
----
-
-## FFT & Image Processing Usage
-
-### Running Benchmarks
-Run the compiled benchmark executable to evaluate 1D ($N = 2^8 \dots 2^{24}$) and 2D ($256 \times 256 \dots 4096 \times 4096$) performance across CPU, Custom CUDA, and cuFFT:
-
-```bash
-./fft_benchmark
-```
-
-### Rendering Visual Plots
-Generate frequency spectrum plots, visual image denoising comparisons, and performance graphs:
-
-```bash
-# Return to repository root
-cd ../..
-python3 scripts/plot_spectrum_and_denoise.py
-python3 scripts/plot_benchmarks.py
-```
-
-Generated image artifacts will be stored in `docs/images/`.
-
----
-
-## Performance Benchmarks
-
-Below is a representative benchmark summary comparing execution times and speedups across array sizes:
-
-| Signal / Image Dimension | CPU Execution (ms) | Custom CUDA (ms) | cuFFT Baseline (ms) | Speedup Factor ($T_{\text{CPU}} / T_{\text{cuFFT}}$) |
-| :--- | :---: | :---: | :---: | :---: |
-| **1D Signal ($N = 2^{12}$)** | $1.96$ ms | $0.01$ ms | $0.01$ ms | **245.0x** |
-| **1D Signal ($N = 2^{16}$)** | $40.97$ ms | $0.03$ ms | $0.01$ ms | **5079.7x** |
-| **1D Signal ($N = 2^{20}$)** | $930.50$ ms | $0.58$ ms | $0.16$ ms | **5768.0x** |
-| **2D Image ($512 \times 512$)** | $216.60$ ms | $0.12$ ms | $0.03$ ms | **7344.5x** |
-| **2D Image ($1024 \times 1024$)** | $948.91$ ms | $0.52$ ms | $0.13$ ms | **7239.6x** |
-
-### Benchmark Visualization
-
-| 1D FFT Speedup Curves | 2D Image FFT Speedup Multiplier |
-| :---: | :---: |
-| ![1D Benchmarks](docs/images/benchmark_1d_performance.png) | ![2D Benchmarks](docs/images/benchmark_2d_performance.png) |
-
----
-
-## CUDA Basics Examples
-
-The repository contains classic introductory CUDA programs in the root folder:
-
-- **`n1.cu`**: Basic kernel launch and device memory allocation (`cudaMalloc`, `cudaMemcpy`).
-- **`n2.cu`**: Unified memory (`cudaMallocManaged`) and custom smart pointer deleters.
-- **`n3.cu`**: High-level parallel vector squaring with **Thrust**.
-- **`n4.cu`**: CPU vs. Thrust GPU performance benchmarking.
-- **`n5.cu`**: Interoperability between **Eigen** matrix objects and raw CUDA kernels.
-- **`n6.cu`**: Interoperability between Eigen host vectors and Thrust device operations.
-
-To compile any basic example directly with `nvcc`:
-
-```bash
-nvcc -O3 -I. n1.cu -o n1
-./n1
 ```
 
 ---
